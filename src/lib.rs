@@ -165,13 +165,15 @@ impl<T: ?Sized> Ioctl<T> {
     /// ```
     ///
     /// ```
+    /// use std::io;
     /// use std::fs::File;
     /// use std::ffi::c_int;
     /// use linux_ioctl::*;
     ///
     /// const FIONREAD: Ioctl<*mut c_int> = Ioctl::from_raw(0x541B);
     ///
-    /// let file = File::open("/dev/tty")?;
+    /// let file = File::open("/dev/ptmx")
+    ///     .map_err(|e| io::Error::new(e.kind(), format!("failed to open `/dev/ptmx`: {e}")))?;
     ///
     /// let mut bytes = c_int::MAX;
     /// unsafe { FIONREAD.ioctl(&file, &mut bytes)? };
@@ -262,7 +264,7 @@ impl Ioctl<NoArgs> {
     /// The caller has to ensure that any safety requirements of the *ioctl* are met, and that `fd`
     /// belongs to the driver it expects.
     pub unsafe fn ioctl(self, fd: &impl AsRawFd) -> io::Result<c_int> {
-        let res = unsafe { libc::ioctl(fd.as_raw_fd(), self.request.into(), 0) };
+        let res = unsafe { libc::ioctl(fd.as_raw_fd(), self.request as _, 0) };
         if res == -1 {
             Err(io::Error::last_os_error())
         } else {
@@ -286,7 +288,7 @@ impl<T> Ioctl<T> {
     /// The caller has to ensure that any safety requirements of the *ioctl* are met, and that `fd`
     /// belongs to the driver it expects.
     pub unsafe fn ioctl(self, fd: &impl AsRawFd, arg: T) -> io::Result<c_int> {
-        let res = unsafe { libc::ioctl(fd.as_raw_fd(), self.request.into(), arg) };
+        let res = unsafe { libc::ioctl(fd.as_raw_fd(), self.request as _, arg) };
         if res == -1 {
             Err(io::Error::last_os_error())
         } else {

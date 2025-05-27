@@ -8,6 +8,9 @@ on:
 env:
   RUSTUP_MAX_RETRIES: 10
   MSRV: 1.85.0  # (keep this in sync with `Cargo.toml`'s `rust-version`)
+  # Tests have to run as root on GHA since the VM image is very restrictive about
+  # who can open "fun" device files like `/dev/uinput`.
+  CICD_SUDO: 1
 
 jobs:
   msrv:
@@ -29,7 +32,6 @@ jobs:
 
     - name: Run CI/CD
       run: sludge-cicd
-      # (no token, this should only run tests)
 
   build:
     name: Build only
@@ -37,9 +39,15 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+          - os: ubuntu-latest
             target: x86_64-unknown-freebsd
+          - os: ubuntu-latest
+            target: i686-unknown-freebsd
           - os: macos-latest
             target: x86_64-apple-darwin
+          - os: macos-latest
+            target: aarch64-apple-darwin
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -80,12 +88,15 @@ jobs:
     - name: Install Rust target
       run: rustup target add ${{ matrix.target }}
 
+    - name: Install CI/CD tooling
+      run: cargo install sludge-cicd --debug
+
     - name: Run CI
       run: sludge-cicd --target ${{ matrix.target }}
 
   cd:
     name: CD
-    needs: [msrv, build]
+    needs: [msrv, build, ci]
     runs-on: ubuntu-latest
 
     permissions:

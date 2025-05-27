@@ -1,6 +1,6 @@
 # `linux-ioctl`
 
-Simple porting tools for `ioctl(2)` driver interfaces.
+Simple porting tools for Linux-style `ioctl(2)` driver interfaces.
 
 ## Motivation
 
@@ -41,7 +41,7 @@ use libc::uinput_setup;
 use linux_ioctl::{Ioctl, _IO, _IOW};
 
 const UINPUT_IOCTL_BASE: u8 = b'U';
-const UI_DEV_CREATE: Ioctl = _IO(UINPUT_IOCTL_BASE, 1);
+const UI_DEV_CREATE: Ioctl  = _IO(UINPUT_IOCTL_BASE, 1);
 const UI_DEV_DESTROY: Ioctl = _IO(UINPUT_IOCTL_BASE, 2);
 const UI_DEV_SETUP: Ioctl<*const uinput_setup> = _IOW(UINPUT_IOCTL_BASE, 3);
 
