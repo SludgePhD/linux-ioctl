@@ -1,0 +1,112 @@
+name: CI/CD
+on:
+  pull_request:
+  push:
+    branches:
+    - main
+
+env:
+  RUSTUP_MAX_RETRIES: 10
+  MSRV: 1.85.0  # (keep this in sync with `Cargo.toml`'s `rust-version`)
+
+jobs:
+  msrv:
+    name: MSRV
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      run: |
+        rustup install ${{ env.MSRV }} --profile=minimal
+        rustup default ${{ env.MSRV }}
+        rustup install nightly --profile=minimal
+
+    - name: Install CI/CD tooling
+      run: cargo install sludge-cicd --debug
+
+    - name: Run CI/CD
+      run: sludge-cicd
+      # (no token, this should only run tests)
+
+  build:
+    name: Build only
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-freebsd
+          - os: macos-latest
+            target: x86_64-apple-darwin
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      run: |
+        rustup install stable --profile=minimal
+        rustup install nightly --profile=minimal
+
+    - name: Install Rust target
+      run: rustup target add ${{ matrix.target }}
+
+    - name: Build the library
+      run: cargo build --target ${{ matrix.target }}
+
+  ci:
+    name: CI
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      run: |
+        rustup install stable --profile=minimal
+        rustup install nightly --profile=minimal
+
+    - name: Install Rust target
+      run: rustup target add ${{ matrix.target }}
+
+    - name: Run CI
+      run: sludge-cicd --target ${{ matrix.target }}
+
+  cd:
+    name: CD
+    needs: [msrv, build]
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write  # pushes tags to the repo
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Install Rust toolchain
+      run: |
+        rustup install stable --profile=minimal
+        rustup install nightly --profile=minimal
+
+    - name: Install CI/CD tooling
+      run: cargo install sludge-cicd --debug
+
+    - name: Run CI/CD
+      run: sludge-cicd
+      env:
+        CRATES_IO_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

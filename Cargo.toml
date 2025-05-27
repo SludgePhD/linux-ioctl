@@ -1,0 +1,12 @@
+[package]
+name = "linux-ioctl"
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+rust-version = "1.85"  # (keep this in sync with `ci.yaml`)
+categories = ["os::linux-apis"]
+repository = "https://github.com/SludgePhD/linux-ioctl"
+description = "Helpers for invoking `ioctl`s"
+
+[dependencies]
+libc = "0.2.172"
