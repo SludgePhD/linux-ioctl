@@ -483,7 +483,7 @@ pub const fn _IOR<T>(ty: u8, nr: u8) -> Ioctl<*mut T> {
     const {
         assert!(size_of::<T>() <= (_IOC_SIZEMASK as usize));
     }
-    _IOC(_IOC_READ, ty, nr, size_of::<T>()).with_arg()
+    _IOC(_IOC_READ, ty, nr, size_of::<T>())
 }
 
 /// Creates an [`Ioctl`] that writes data of type `T` to the kernel.
@@ -539,7 +539,7 @@ pub const fn _IOW<T>(ty: u8, nr: u8) -> Ioctl<*const T> {
     const {
         assert!(size_of::<T>() <= (_IOC_SIZEMASK as usize));
     }
-    _IOC(_IOC_WRITE, ty, nr, size_of::<T>()).with_arg()
+    _IOC(_IOC_WRITE, ty, nr, size_of::<T>())
 }
 
 /// Creates an [`Ioctl`] that writes and reads data of type `T`.
@@ -557,7 +557,7 @@ pub const fn _IOWR<T>(ty: u8, nr: u8) -> Ioctl<*mut T> {
     const {
         assert!(size_of::<T>() <= (_IOC_SIZEMASK as usize));
     }
-    _IOC(_IOC_READ_WRITE, ty, nr, size_of::<T>()).with_arg()
+    _IOC(_IOC_READ_WRITE, ty, nr, size_of::<T>())
 }
 
 /// Manually constructs an [`Ioctl`] from its components.
@@ -605,7 +605,7 @@ pub const fn _IOWR<T>(ty: u8, nr: u8) -> Ioctl<*mut T> {
 ///
 /// const UINPUT_IOCTL_BASE: u8 = b'U';
 /// const fn UI_GET_SYSNAME(len: usize) -> Ioctl<*mut c_char> {
-///     _IOC(_IOC_READ, UINPUT_IOCTL_BASE, 44, len).with_arg()
+///     _IOC(_IOC_READ, UINPUT_IOCTL_BASE, 44, len)
 /// }
 ///
 /// // Use it like this:
@@ -618,7 +618,7 @@ pub const fn _IOWR<T>(ty: u8, nr: u8) -> Ioctl<*mut T> {
 /// ```
 #[allow(non_snake_case)]
 #[inline]
-pub const fn _IOC(dir: Dir, ty: u8, nr: u8, size: usize) -> Ioctl<NoArgs> {
+pub const fn _IOC<T: ?Sized>(dir: Dir, ty: u8, nr: u8, size: usize) -> Ioctl<T> {
     use consts::*;
 
     assert!(size <= (_IOC_SIZEMASK as usize));
