@@ -106,7 +106,7 @@ mod readme {}
 
 mod consts;
 
-use std::{ffi::c_int, io, marker::PhantomData, os::fd::AsRawFd};
+use std::{ffi::c_int, fmt, io, marker::PhantomData, ops::BitOr, os::fd::AsRawFd};
 
 use consts::_IOC_SIZEMASK;
 
@@ -349,14 +349,57 @@ pub struct NoArgs {
     _f: [u8],
 }
 
+/// Direction of an [`Ioctl`].
+///
+/// Used by [`_IOC`]. Constructed by using the constants [`_IOC_NONE`], [`_IOC_READ`], and
+/// [`_IOC_WRITE`].
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub struct Dir(u32);
+
+impl BitOr for Dir {
+    type Output = Dir;
+
+    #[inline]
+    fn bitor(self, rhs: Self) -> Self::Output {
+        // `_IOC_NONE` is 0 on x86, but non-zero on other architectures. It is invalid and
+        // non-portable to combine it with other usages, so we check for that here.
+        if (self == _IOC_NONE && rhs != _IOC_NONE) || (self != _IOC_NONE && rhs == _IOC_NONE) {
+            panic!("`_IOC_NONE` cannot be combined with other values");
+        }
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl fmt::Debug for Dir {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if *self == _IOC_READ | _IOC_WRITE {
+            f.write_str("_IOC_READ | _IOC_WRITE")
+        } else if *self == _IOC_READ {
+            f.write_str("_IOC_READ")
+        } else if *self == _IOC_WRITE {
+            f.write_str("_IOC_WRITE")
+        } else if *self == _IOC_NONE {
+            f.write_str("_IOC_NONE")
+        } else {
+            write!(f, "{:#x}", self.0)
+        }
+    }
+}
+
 /// Indicates that an *ioctl* neither reads nor writes data through its argument.
-pub const _IOC_NONE: u32 = consts::_IOC_NONE;
+pub const _IOC_NONE: Dir = Dir(consts::_IOC_NONE);
 
 /// Indicates that an *ioctl* reads data through its pointer argument.
-pub const _IOC_READ: u32 = consts::_IOC_READ;
+pub const _IOC_READ: Dir = Dir(consts::_IOC_READ);
 
 /// Indicates that an *ioctl* writes data through its pointer argument.
-pub const _IOC_WRITE: u32 = consts::_IOC_WRITE;
+pub const _IOC_WRITE: Dir = Dir(consts::_IOC_WRITE);
+
+/// Indicates that an *ioctl* both reads and writes data through its pointer argument.
+///
+/// Equivalent to `_IOC_READ | _IOC_WRITE`, which doesn't work in `const` contexts. Does not have a
+/// C equivalent.
+pub const _IOC_READ_WRITE: Dir = Dir(consts::_IOC_READ | consts::_IOC_WRITE);
 
 // NB: these are bare `u32`s because `const` `BitOr` impls aren't possible on stable
 // (they're only used with `_IOC`, which is a somewhat niche API)
@@ -514,7 +557,7 @@ pub const fn _IOWR<T>(ty: u8, nr: u8) -> Ioctl<*mut T> {
     const {
         assert!(size_of::<T>() <= (_IOC_SIZEMASK as usize));
     }
-    _IOC(_IOC_READ | _IOC_WRITE, ty, nr, size_of::<T>()).with_arg()
+    _IOC(_IOC_READ_WRITE, ty, nr, size_of::<T>()).with_arg()
 }
 
 /// Manually constructs an [`Ioctl`] from its components.
@@ -526,8 +569,8 @@ pub const fn _IOWR<T>(ty: u8, nr: u8) -> Ioctl<*mut T> {
 ///
 /// # Arguments
 ///
-/// - **`dir`**: *must* be one of [`_IOC_NONE`], [`_IOC_READ`], [`_IOC_WRITE`], or an ORed-together
-///   combination. 0 is **not** valid on all architectures.
+/// - **`dir`**: Direction of the ioctl. One of [`_IOC_NONE`], [`_IOC_READ`], [`_IOC_WRITE`], or
+///   `_IOC_READ | _IOC_WRITE` (aka [`_IOC_READ_WRITE`]).
 /// - **`ty`**: the `ioctl` group or type to identify the driver or subsystem. You can find a list
 ///   [here].
 /// - **`nr`**: the `ioctl` number within its group.
@@ -575,18 +618,54 @@ pub const fn _IOWR<T>(ty: u8, nr: u8) -> Ioctl<*mut T> {
 /// ```
 #[allow(non_snake_case)]
 #[inline]
-pub const fn _IOC(dir: u32, ty: u8, nr: u8, size: usize) -> Ioctl<NoArgs> {
+pub const fn _IOC(dir: Dir, ty: u8, nr: u8, size: usize) -> Ioctl<NoArgs> {
     use consts::*;
 
-    assert!(
-        dir & !(_IOC_NONE | _IOC_WRITE | _IOC_READ) == 0,
-        "`dir` must be a combination of `_IOC_NONE`, `_IOC_READ`, and `_IOC_WRITE`"
-    );
     assert!(size <= (_IOC_SIZEMASK as usize));
 
-    let request = (dir << _IOC_DIRSHIFT)
+    let request = (dir.0 << _IOC_DIRSHIFT)
         | ((ty as u32) << _IOC_TYPESHIFT)
         | ((nr as u32) << _IOC_NRSHIFT)
         | ((size as u32) << _IOC_SIZESHIFT);
     Ioctl::from_raw(request)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn dir_or() {
+        assert_ne!(_IOC_NONE, _IOC_READ);
+        assert_ne!(_IOC_NONE, _IOC_WRITE);
+
+        assert_eq!(_IOC_READ | _IOC_WRITE, _IOC_READ_WRITE);
+        assert_eq!(_IOC_READ | _IOC_READ, _IOC_READ);
+        assert_eq!(_IOC_WRITE | _IOC_WRITE, _IOC_WRITE);
+        assert_eq!(_IOC_NONE | _IOC_NONE, _IOC_NONE);
+    }
+
+    #[test]
+    #[should_panic(expected = "`_IOC_NONE` cannot be combined with other values")]
+    fn dir_none_or_read() {
+        let _ = _IOC_NONE | _IOC_READ;
+    }
+
+    #[test]
+    #[should_panic(expected = "`_IOC_NONE` cannot be combined with other values")]
+    fn dir_none_or_write() {
+        let _ = _IOC_NONE | _IOC_WRITE;
+    }
+
+    #[test]
+    #[should_panic(expected = "`_IOC_NONE` cannot be combined with other values")]
+    fn dir_read_or_none() {
+        let _ = _IOC_READ | _IOC_NONE;
+    }
+
+    #[test]
+    #[should_panic(expected = "`_IOC_NONE` cannot be combined with other values")]
+    fn dir_write_or_none() {
+        let _ = _IOC_WRITE | _IOC_NONE;
+    }
 }
