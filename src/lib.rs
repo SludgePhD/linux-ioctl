@@ -362,10 +362,13 @@ impl BitOr for Dir {
     #[inline]
     fn bitor(self, rhs: Self) -> Self::Output {
         // `_IOC_NONE` is 0 on x86, but non-zero on other architectures. It is invalid and
-        // non-portable to combine it with other usages, so we check for that here.
+        // non-portable to combine it with other usages, so we prevent it here.
+        // This check will easily optimize out in almost all cases, since the direction is a
+        // compile-time constant.
         if (self == _IOC_NONE && rhs != _IOC_NONE) || (self != _IOC_NONE && rhs == _IOC_NONE) {
             panic!("`_IOC_NONE` cannot be combined with other values");
         }
+
         Self(self.0 | rhs.0)
     }
 }
@@ -581,9 +584,7 @@ pub const fn _IOWR<T>(ty: u8, nr: u8) -> Ioctl<*mut T> {
 ///
 /// # Panics
 ///
-/// This function may panic when `dir` is not one of [`_IOC_NONE`], [`_IOC_READ`], [`_IOC_WRITE`],
-/// or an ORed-together combination of those constants.
-/// It may also panic when `size` exceeds the maximum parameter size.
+/// This function may panic when `size` exceeds the (platform-specific) maximum parameter size.
 ///
 /// # Example
 ///
