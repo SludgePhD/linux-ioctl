@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.2.1
+
+- Add `Ioctl::with_direct_arg` for more convenient binding to `_IOW` `ioctl`s that take a direct argument.
+- Minor documentation improvements.
+
 ## v0.2.0
 
 - Make `_IOC` generic over the ioctl argument type.
