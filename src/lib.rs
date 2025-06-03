@@ -200,8 +200,8 @@ impl<T: ?Sized> Ioctl<T> {
     ///
     /// # Examples
     ///
-    /// The `KVM_CREATE_VM` *ioctl* is declared with [`_IO`], but takes an `int` as its argument,
-    /// specifying the VM type (`KVM_VM_*`).
+    /// The `KVM_CREATE_VM` *ioctl* is declared with [`_IO`], but expects an `int` argument to be
+    /// passed to `ioctl(2)`, specifying the VM type (`KVM_VM_*`).
     ///
     /// From `linux/kvm.h`:
     ///
@@ -243,6 +243,35 @@ impl<T: ?Sized> Ioctl<T> {
     /// This is passed to `ioctl(2)` as its second argument.
     pub fn request(self) -> u32 {
         self.request
+    }
+}
+
+impl<T> Ioctl<*const T> {
+    /// Changes the [`Ioctl`] argument type to be passed directly instead of behind a pointer.
+    ///
+    /// Does not change the request code.
+    ///
+    /// Many linux headers define `ioctl`s like `_IOW('U', 100, int)`, but then expect the `int`
+    /// argument to be passed as a direct argument to `ioctl(2)` instead of passing a pointer.
+    /// This method can be used to bind to these `ioctl`s.
+    ///
+    /// # Example
+    ///
+    /// `uinput` defines several `ioctl`s where this method is useful:
+    ///
+    /// ```c
+    /// #define UI_SET_EVBIT		_IOW(UINPUT_IOCTL_BASE, 100, int)
+    /// ```
+    ///
+    /// ```
+    /// use std::ffi::c_int;
+    /// use linux_ioctl::{Ioctl, _IOW};
+    ///
+    /// const UI_SET_EVBIT: Ioctl<c_int> = _IOW(b'U', 100).with_direct_arg();
+    /// ```
+    #[inline]
+    pub const fn with_direct_arg(self) -> Ioctl<T> {
+        self.with_arg()
     }
 }
 
@@ -491,8 +520,13 @@ pub const fn _IOR<T>(ty: u8, nr: u8) -> Ioctl<*mut T> {
 
 /// Creates an [`Ioctl`] that writes data of type `T` to the kernel.
 ///
-/// A pointer to the data will be passed to `ioctl(2)`, and the kernel will read the argument from
-/// that location.
+/// By default, a pointer to the data will be passed to `ioctl(2)`, and the kernel will read the
+/// argument from that location.
+/// This is generally correct if the argument is a `struct`, but if the argument is a primitive type
+/// like `int`, or is already a pointer like `char*`, many drivers expect the argument to be passed
+/// to `ioctl(2)` *without* indirection.
+/// To bind to those `ioctl`s, you can call [`Ioctl::with_direct_arg`] on the [`Ioctl`] returned by
+/// [`_IOW`].
 ///
 /// # Errors
 ///
@@ -502,7 +536,7 @@ pub const fn _IOR<T>(ty: u8, nr: u8) -> Ioctl<*mut T> {
 ///
 /// # Example
 ///
-/// The *uinput* `ioctl` `UI_DEV_SETUP` can be invoked using [`_IOW`].
+/// Let's create a virtual input device with *uinput*.
 ///
 /// From `linux/uinput.h`:
 ///
@@ -513,10 +547,21 @@ pub const fn _IOR<T>(ty: u8, nr: u8) -> Ioctl<*mut T> {
 /// #define UI_DEV_DESTROY		_IO(UINPUT_IOCTL_BASE, 2)
 /// ...
 /// #define UI_DEV_SETUP _IOW(UINPUT_IOCTL_BASE, 3, struct uinput_setup)
+/// ...
+/// #define UI_SET_EVBIT		_IOW(UINPUT_IOCTL_BASE, 100, int)
+/// #define UI_SET_KEYBIT		_IOW(UINPUT_IOCTL_BASE, 101, int)
+/// ```
+///
+/// From `linux/input.h`:
+///
+/// ```c
+/// #define EV_KEY			0x01
+/// ...
+/// #define KEY_A			30
 /// ```
 ///
 /// ```rust
-/// use std::{mem, fs::File, ffi::c_char};
+/// use std::{mem, fs::File, ffi::{c_char, c_int}};
 /// use libc::uinput_setup;
 /// use linux_ioctl::*;
 ///
@@ -524,10 +569,22 @@ pub const fn _IOR<T>(ty: u8, nr: u8) -> Ioctl<*mut T> {
 /// const UI_DEV_CREATE: Ioctl<NoArgs> = _IO(UINPUT_IOCTL_BASE, 1);
 /// const UI_DEV_DESTROY: Ioctl<NoArgs> = _IO(UINPUT_IOCTL_BASE, 2);
 /// const UI_DEV_SETUP: Ioctl<*const uinput_setup> = _IOW(UINPUT_IOCTL_BASE, 3);
+/// // These two expect their argument to be passed directly instead of behind a pointer:
+/// const UI_SET_EVBIT: Ioctl<c_int> = _IOW(UINPUT_IOCTL_BASE, 100).with_direct_arg();
+/// const UI_SET_KEYBIT: Ioctl<c_int> = _IOW(UINPUT_IOCTL_BASE, 101).with_direct_arg();
+///
+/// const EV_KEY: c_int = 0x01;
+/// const KEY_A: c_int = 30;
 ///
 /// let uinput = File::options().write(true).open("/dev/uinput")?;
 ///
-/// let mut setup: libc::uinput_setup = unsafe { mem::zeroed() };
+/// // Enable the "A" key:
+/// unsafe {
+///     UI_SET_EVBIT.ioctl(&uinput, EV_KEY)?;
+///     UI_SET_KEYBIT.ioctl(&uinput, KEY_A)?;
+/// }
+///
+/// let mut setup: uinput_setup = unsafe { mem::zeroed() };
 /// setup.name[0] = b'A' as c_char; // (must not be blank)
 /// unsafe {
 ///     UI_DEV_SETUP.ioctl(&uinput, &setup)?;
