@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.2.2
+
+- Add `Ioctl::cast_mut` and `Ioctl::cast_const`, mirroring the methods on raw pointers.
+
 ## v0.2.1
 
 - Add `Ioctl::with_direct_arg` for more convenient binding to `_IOW` `ioctl`s that take a direct argument.
