@@ -240,7 +240,7 @@ impl<T: ?Sized> Ioctl<T> {
     /// Returns the *ioctl* request code.
     ///
     /// This is passed to `ioctl(2)` as its second argument.
-    pub fn request(self) -> u32 {
+    pub const fn request(self) -> u32 {
         self.request
     }
 }
