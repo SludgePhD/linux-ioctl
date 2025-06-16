@@ -110,16 +110,15 @@ use std::{ffi::c_int, fmt, io, marker::PhantomData, ops::BitOr, os::fd::AsRawFd}
 
 use consts::_IOC_SIZEMASK;
 
-/// An *ioctl*.
+/// An `ioctl`.
 ///
-/// [`Ioctl`] can represent *ioctl*s that take either no arguments or a single argument.
-/// If `T` is [`NoArgs`], the *ioctl* takes no arguments.
-/// For other values of `T`, the *ioctl* takes `T` as its only argument.
-/// Often, the argument `T` is a pointer or reference to a struct that contains the actual
-/// arguments.
+/// [`Ioctl`] can represent `ioctl`s that take either no arguments or a single argument.
+/// If `T` is [`NoArgs`], the `ioctl` takes no arguments.
+/// For other values of `T`, the `ioctl` takes `T` as its only argument.
+/// Often, the argument `T` is a pointer to a struct that contains the actual arguments.
 ///
-/// While [`Ioctl`] cannot handle *ioctl*s that require passing more than one argument to the
-/// `ioctl(2)` function, Linux doesn't have any *ioctl*s that take more than one argument, and is
+/// While [`Ioctl`] cannot handle `ioctl`s that require passing more than one argument to the
+/// `ioctl(2)` function, Linux doesn't have any `ioctl`s that take more than one argument, and is
 /// unlikely to gain any in the future.
 ///
 /// The [`Ioctl`] type is constructed with the free functions [`_IO`], [`_IOR`], [`_IOW`],
@@ -273,6 +272,55 @@ impl<T> Ioctl<*const T> {
     pub const fn with_direct_arg(self) -> Ioctl<T> {
         self.with_arg()
     }
+
+    /// Casts the [`Ioctl`] so that it takes a `*mut` pointer instead of a `*const` pointer.
+    ///
+    /// This can be used to fix an `ioctl` that is incorrectly declared as only *reading* its
+    /// argument through the pointer (with [`_IOW`]), when in reality the kernel can *write* through
+    /// the pointer as well.
+    ///
+    /// An ioctl that writes through its pointer argument, but is incorrectly declared as
+    /// [`Ioctl<*const T>`] will generally cause UB when invoked with an immutable reference.
+    ///
+    /// Also see [`Ioctl::cast_const`] for the opposite direction.
+    ///
+    /// # Example
+    ///
+    /// The `EVIOCSFF` ioctl from evdev is incorrectly declared with [`_IOW`], but may write to the
+    /// data, as documented here:
+    ///
+    /// > “request” must be EVIOCSFF.
+    /// >
+    /// > “effect” points to a structure describing the effect to upload. The effect is uploaded, but
+    /// > not played. **The content of effect may be modified.**
+    ///
+    /// <https://www.kernel.org/doc/html/latest/input/ff.html>
+    ///
+    /// ```
+    /// use std::ffi::c_void as ff_effect;
+    /// use linux_ioctl::{Ioctl, _IOW};
+    ///
+    /// pub const EVIOCSFF: Ioctl<*mut ff_effect> = _IOW(b'E', 0x80).cast_mut();
+    /// ```
+    #[inline]
+    pub const fn cast_mut(self) -> Ioctl<*mut T> {
+        self.with_arg()
+    }
+}
+
+impl<T> Ioctl<*mut T> {
+    /// Casts the [`Ioctl`] so that it takes a `*const` pointer instead of a `*mut` pointer.
+    ///
+    /// This performs the opposite operation of [`Ioctl::cast_mut`], and can be used when an `ioctl`
+    /// is incorrectly declared as writing to its argument (yielding an [`Ioctl<*mut T>`]) when it
+    /// actually only reads from it.
+    ///
+    /// Only use this method if you are sure it is correct! If the `ioctl` *does* write through the
+    /// pointer, the result is likely UB!
+    #[inline]
+    pub const fn cast_const(self) -> Ioctl<*const T> {
+        self.with_arg()
+    }
 }
 
 impl Ioctl<NoArgs> {
@@ -421,20 +469,17 @@ impl fmt::Debug for Dir {
 /// Indicates that an *ioctl* neither reads nor writes data through its argument.
 pub const _IOC_NONE: Dir = Dir(consts::_IOC_NONE);
 
-/// Indicates that an *ioctl* reads data through its pointer argument.
+/// Indicates that an `ioctl` reads data from the kernel through its pointer argument.
 pub const _IOC_READ: Dir = Dir(consts::_IOC_READ);
 
-/// Indicates that an *ioctl* writes data through its pointer argument.
+/// Indicates that an `ioctl` writes data to the kernel through its pointer argument.
 pub const _IOC_WRITE: Dir = Dir(consts::_IOC_WRITE);
 
-/// Indicates that an *ioctl* both reads and writes data through its pointer argument.
+/// Indicates that an `ioctl` both reads and writes data through its pointer argument.
 ///
 /// Equivalent to `_IOC_READ | _IOC_WRITE`, which doesn't work in `const` contexts. Does not have a
 /// C equivalent.
 pub const _IOC_READ_WRITE: Dir = Dir(consts::_IOC_READ | consts::_IOC_WRITE);
-
-// NB: these are bare `u32`s because `const` `BitOr` impls aren't possible on stable
-// (they're only used with `_IOC`, which is a somewhat niche API)
 
 /// Creates an [`Ioctl`] that doesn't read or write any userspace data.
 ///
@@ -527,6 +572,16 @@ pub const fn _IOR<T>(ty: u8, nr: u8) -> Ioctl<*mut T> {
 /// to `ioctl(2)` *without* indirection.
 /// To bind to those `ioctl`s, you can call [`Ioctl::with_direct_arg`] on the [`Ioctl`] returned by
 /// [`_IOW`].
+///
+/// **Note**: Some Linux `ioctl`s are **incorrectly** declared with [`_IOW`].
+/// They *will* write to the argument, and if the pointer you pass doesn't have write permission it
+/// *will* cause UB.
+/// Use [`Ioctl::cast_mut`] before invoking the [`Ioctl`] to fix these kinds of misdeclared
+/// `ioctl`s!
+///
+/// Apart from reading comments in the header files, and looking at the Linux source code, there is
+/// no reliable way of finding out which `ioctl` definitions are wrong like that.
+/// Good luck!
 ///
 /// # Errors
 ///
