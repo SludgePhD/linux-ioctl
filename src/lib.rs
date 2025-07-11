@@ -55,7 +55,7 @@
 //!
 //! # Portability
 //!
-//! Despite being about Linux APIs, and following the Linux convention for declaring *ioctl* codes,
+//! Despite being about Linux APIs, and following the Linux convention for declaring `ioctl` codes,
 //! this library should also work on other operating systems that implement a Linux-comparible
 //! `ioctl`-based API.
 //!
@@ -63,7 +63,7 @@
 //!
 //! # Safety
 //!
-//! To safely perform an *ioctl*, the actual behavior of the kernel-side has to match the behavior
+//! To safely perform an `ioctl`, the actual behavior of the kernel-side has to match the behavior
 //! expected by userspace (which is encoded in the [`Ioctl`] type).
 //!
 //! To accomplish this, it is necessary that the [`Ioctl`] was constructed correctly by the caller:
@@ -74,9 +74,9 @@
 //! as when binding to an arbitrary C function).
 //!
 //! However, this is not, strictly speaking, *sufficient* to ensure safety:
-//! several drivers and subsystems share the same *ioctl* "type" value, which may lead to an ioctl
+//! several drivers and subsystems share the same `ioctl` "type" value, which may lead to an ioctl
 //! request code that is interpreted differently, depending on which driver receives the request.
-//! Since the *ioctl* request code encodes the size of the argument type, this operation is unlikely
+//! Since the `ioctl` request code encodes the size of the argument type, this operation is unlikely
 //! to cause a fault when accessing memory, since both argument types have the same size, so the
 //! `ioctl` syscall may complete successfully instead of returning `EFAULT`.
 //!
@@ -123,7 +123,7 @@ use consts::_IOC_SIZEMASK;
 ///
 /// The [`Ioctl`] type is constructed with the free functions [`_IO`], [`_IOR`], [`_IOW`],
 /// [`_IOWR`], and [`_IOC`].
-/// For legacy *ioctl*s, it can also be created via [`Ioctl::from_raw`].
+/// For legacy `ioctl`s, it can also be created via [`Ioctl::from_raw`].
 pub struct Ioctl<T: ?Sized = NoArgs> {
     request: u32,
     _p: PhantomData<T>,
@@ -139,7 +139,7 @@ impl<T: ?Sized> Clone for Ioctl<T> {
 impl<T: ?Sized> Ioctl<T> {
     /// Creates an [`Ioctl`] object from a raw request code and an arbitrary argument type.
     ///
-    /// This can be used for legacy *ioctl*s that were defined before the `_IOx` macros were
+    /// This can be used for legacy `ioctl`s that were defined before the `_IOx` macros were
     /// introduced.
     ///
     /// # Examples
@@ -188,18 +188,18 @@ impl<T: ?Sized> Ioctl<T> {
         }
     }
 
-    /// Changes the *ioctl* argument type to `T2`.
+    /// Changes the `ioctl` argument type to `T2`.
     ///
-    /// This can be used for *ioctl*s that incorrectly declare their type, or for *ioctl*s that take
-    /// a by-value argument, rather than [`_IOW`]-type *ioctl*s that take their argument indirectly
+    /// This can be used for `ioctl`s that incorrectly declare their type, or for `ioctl`s that take
+    /// a by-value argument, rather than [`_IOW`]-type `ioctl`s that take their argument indirectly
     /// through a pointer.
     ///
     /// Returns an [`Ioctl`] that passes an argument of type `T2` to the kernel, while using the
-    /// *ioctl* request code from `self`.
+    /// `ioctl` request code from `self`.
     ///
     /// # Examples
     ///
-    /// The `KVM_CREATE_VM` *ioctl* is declared with [`_IO`], but expects an `int` argument to be
+    /// The `KVM_CREATE_VM` `ioctl` is declared with [`_IO`], but expects an `int` argument to be
     /// passed to `ioctl(2)`, specifying the VM type (`KVM_VM_*`).
     ///
     /// From `linux/kvm.h`:
@@ -237,7 +237,7 @@ impl<T: ?Sized> Ioctl<T> {
         }
     }
 
-    /// Returns the *ioctl* request code.
+    /// Returns the `ioctl` request code.
     ///
     /// This is passed to `ioctl(2)` as its second argument.
     pub const fn request(self) -> u32 {
@@ -324,21 +324,21 @@ impl<T> Ioctl<*mut T> {
 }
 
 impl Ioctl<NoArgs> {
-    /// Performs an *ioctl* that doesn't take an argument.
+    /// Performs an `ioctl` that doesn't take an argument.
     ///
     /// On success, returns the value returned by the `ioctl` syscall. On error (when `ioctl`
     /// returns -1), returns the error from *errno*.
     ///
     /// Note that the actual `ioctl(2)` call performed will pass 0 as a dummy argument to the
-    /// *ioctl*. This is because some Linux *ioctl*s are declared without an argument, but will fail
+    /// `ioctl`. This is because some Linux `ioctl`s are declared without an argument, but will fail
     /// unless they receive 0 as their argument (eg. `KVM_GET_API_VERSION`). There should be no harm
     /// in passing this argument unconditionally, as the kernel will typically just ignore excess
     /// arguments.
     ///
     /// # Safety
     ///
-    /// This method performs an arbitrary *ioctl* on an arbitrary file descriptor.
-    /// The caller has to ensure that any safety requirements of the *ioctl* are met, and that `fd`
+    /// This method performs an arbitrary `ioctl` on an arbitrary file descriptor.
+    /// The caller has to ensure that any safety requirements of the `ioctl` are met, and that `fd`
     /// belongs to the driver it expects.
     pub unsafe fn ioctl(self, fd: &impl AsRawFd) -> io::Result<c_int> {
         let res = unsafe { libc::ioctl(fd.as_raw_fd(), self.request as _, 0) };
@@ -351,18 +351,18 @@ impl Ioctl<NoArgs> {
 }
 
 impl<T> Ioctl<T> {
-    /// Performs an *ioctl* that takes an argument of type `T`.
+    /// Performs an `ioctl` that takes an argument of type `T`.
     ///
     /// Returns the value returned by the `ioctl(2)` invocation, or an I/O error if the call failed.
     ///
-    /// For many *ioctl*s, `T` will be a pointer to the actual argument.
+    /// For many `ioctl`s, `T` will be a pointer to the actual argument.
     /// The caller must ensure that it points to valid data that conforms to the requirements of the
-    /// *ioctl*.
+    /// `ioctl`.
     ///
     /// # Safety
     ///
-    /// This method performs an arbitrary *ioctl* on an arbitrary file descriptor.
-    /// The caller has to ensure that any safety requirements of the *ioctl* are met, and that `fd`
+    /// This method performs an arbitrary `ioctl` on an arbitrary file descriptor.
+    /// The caller has to ensure that any safety requirements of the `ioctl` are met, and that `fd`
     /// belongs to the driver it expects.
     pub unsafe fn ioctl(self, fd: &impl AsRawFd, arg: T) -> io::Result<c_int> {
         let res = unsafe { libc::ioctl(fd.as_raw_fd(), self.request as _, arg) };
@@ -440,8 +440,8 @@ impl BitOr for Dir {
     fn bitor(self, rhs: Self) -> Self::Output {
         // `_IOC_NONE` is 0 on x86, but non-zero on other architectures. It is invalid and
         // non-portable to combine it with other usages, so we prevent it here.
-        // This check will easily optimize out in almost all cases, since the direction is a
-        // compile-time constant.
+        // This check will easily optimize out in almost all cases, since the direction is nearly
+        // always a compile-time constant.
         if (self == _IOC_NONE && rhs != _IOC_NONE) || (self != _IOC_NONE && rhs == _IOC_NONE) {
             panic!("`_IOC_NONE` cannot be combined with other values");
         }
@@ -466,7 +466,7 @@ impl fmt::Debug for Dir {
     }
 }
 
-/// Indicates that an *ioctl* neither reads nor writes data through its argument.
+/// Indicates that an `ioctl` neither reads nor writes data through its argument.
 pub const _IOC_NONE: Dir = Dir(consts::_IOC_NONE);
 
 /// Indicates that an `ioctl` reads data from the kernel through its pointer argument.
@@ -477,19 +477,20 @@ pub const _IOC_WRITE: Dir = Dir(consts::_IOC_WRITE);
 
 /// Indicates that an `ioctl` both reads and writes data through its pointer argument.
 ///
-/// Equivalent to `_IOC_READ | _IOC_WRITE`, which doesn't work in `const` contexts. Does not have a
-/// C equivalent.
+/// Equivalent to `_IOC_READ | _IOC_WRITE`, which doesn't work in `const` contexts.
+///
+/// C code always uses `_IOC_READ | _IOC_WRITE` instead of a dedicated constant.
 pub const _IOC_READ_WRITE: Dir = Dir(consts::_IOC_READ | consts::_IOC_WRITE);
 
 /// Creates an [`Ioctl`] that doesn't read or write any userspace data.
 ///
 /// This type of ioctl can return an `int` to userspace via the return value of the `ioctl` syscall.
 /// By default, the returned [`Ioctl`] takes no argument.
-/// [`Ioctl::with_arg`] can be used to pass a direct argument to the *ioctl*.
+/// [`Ioctl::with_arg`] can be used to pass a direct argument to the `ioctl`.
 ///
 /// # Example
 ///
-/// `KVM_GET_API_VERSION` is an *ioctl* that does not take any arguments. The API version is
+/// `KVM_GET_API_VERSION` is an `ioctl` that does not take any arguments. The API version is
 /// returned as the return value of the `ioctl(2)` function.
 ///
 /// From `linux/kvm.h`:
@@ -525,7 +526,7 @@ pub const fn _IO(ty: u8, nr: u8) -> Ioctl<NoArgs> {
 ///
 /// # Errors
 ///
-/// This method will cause a compile-time assertion failure if the size of `T` exceeds the *ioctl*
+/// This method will cause a compile-time assertion failure if the size of `T` exceeds the `ioctl`
 /// argument size limit.
 /// This typically means that the wrong type `T` was specified.
 ///
@@ -585,7 +586,7 @@ pub const fn _IOR<T>(ty: u8, nr: u8) -> Ioctl<*mut T> {
 ///
 /// # Errors
 ///
-/// This method will cause a compile-time assertion failure if the size of `T` exceeds the *ioctl*
+/// This method will cause a compile-time assertion failure if the size of `T` exceeds the `ioctl`
 /// argument size limit.
 /// This typically means that the wrong type `T` was specified.
 ///
@@ -664,7 +665,7 @@ pub const fn _IOW<T>(ty: u8, nr: u8) -> Ioctl<*const T> {
 ///
 /// # Errors
 ///
-/// This method will cause a compile-time assertion failure if the size of `T` exceeds the *ioctl*
+/// This method will cause a compile-time assertion failure if the size of `T` exceeds the `ioctl`
 /// argument size limit.
 /// This typically means that the wrong type `T` was specified.
 #[allow(non_snake_case)]
@@ -700,7 +701,7 @@ pub const fn _IOWR<T>(ty: u8, nr: u8) -> Ioctl<*mut T> {
 ///
 /// # Example
 ///
-/// `UI_GET_SYSNAME` is a polymorphic *ioctl* that can be invoked with a variety of buffer lengths.
+/// `UI_GET_SYSNAME` is a polymorphic `ioctl` that can be invoked with a variety of buffer lengths.
 /// This function can be used to bind to it.
 ///
 /// From `linux/uinput.h`:
