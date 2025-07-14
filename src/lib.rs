@@ -104,11 +104,15 @@
 #[doc = include_str!("../README.md")]
 mod readme {}
 
-mod consts;
+#[cfg(any(target_os = "linux", target_os = "android"))]
+#[path = "platform/linux.rs"]
+mod platform;
+
+#[cfg(any(target_os = "freebsd"))]
+#[path = "platform/freebsd.rs"]
+mod platform;
 
 use std::{ffi::c_int, fmt, io, marker::PhantomData, ops::BitOr, os::fd::AsRawFd};
-
-use consts::_IOC_SIZEMASK;
 
 /// An `ioctl`.
 ///
@@ -477,20 +481,20 @@ impl fmt::Debug for Dir {
 }
 
 /// Indicates that an `ioctl` neither reads nor writes data through its argument.
-pub const _IOC_NONE: Dir = Dir(consts::_IOC_NONE);
+pub const _IOC_NONE: Dir = Dir(platform::_IOC_NONE);
 
 /// Indicates that an `ioctl` reads data from the kernel through its pointer argument.
-pub const _IOC_READ: Dir = Dir(consts::_IOC_READ);
+pub const _IOC_READ: Dir = Dir(platform::_IOC_READ);
 
 /// Indicates that an `ioctl` writes data to the kernel through its pointer argument.
-pub const _IOC_WRITE: Dir = Dir(consts::_IOC_WRITE);
+pub const _IOC_WRITE: Dir = Dir(platform::_IOC_WRITE);
 
 /// Indicates that an `ioctl` both reads and writes data through its pointer argument.
 ///
 /// Equivalent to `_IOC_READ | _IOC_WRITE`, which doesn't work in `const` contexts.
 ///
 /// C code always uses `_IOC_READ | _IOC_WRITE` instead of a dedicated constant.
-pub const _IOC_READ_WRITE: Dir = Dir(consts::_IOC_READ | consts::_IOC_WRITE);
+pub const _IOC_READ_WRITE: Dir = Dir(platform::_IOC_READ | platform::_IOC_WRITE);
 
 /// Creates an [`Ioctl`] that doesn't read or write any userspace data.
 ///
@@ -569,7 +573,7 @@ pub const fn _IO(ty: u8, nr: u8) -> Ioctl<NoArgs> {
 #[allow(non_snake_case)]
 pub const fn _IOR<T>(ty: u8, nr: u8) -> Ioctl<*mut T> {
     const {
-        assert!(size_of::<T>() <= (_IOC_SIZEMASK as usize));
+        assert!(size_of::<T>() <= platform::MAX_ARG_SIZE);
     }
     _IOC(_IOC_READ, ty, nr, size_of::<T>())
 }
@@ -663,7 +667,7 @@ pub const fn _IOR<T>(ty: u8, nr: u8) -> Ioctl<*mut T> {
 #[allow(non_snake_case)]
 pub const fn _IOW<T>(ty: u8, nr: u8) -> Ioctl<*const T> {
     const {
-        assert!(size_of::<T>() <= (_IOC_SIZEMASK as usize));
+        assert!(size_of::<T>() <= platform::MAX_ARG_SIZE);
     }
     _IOC(_IOC_WRITE, ty, nr, size_of::<T>())
 }
@@ -681,7 +685,7 @@ pub const fn _IOW<T>(ty: u8, nr: u8) -> Ioctl<*const T> {
 #[allow(non_snake_case)]
 pub const fn _IOWR<T>(ty: u8, nr: u8) -> Ioctl<*mut T> {
     const {
-        assert!(size_of::<T>() <= (_IOC_SIZEMASK as usize));
+        assert!(size_of::<T>() <= platform::MAX_ARG_SIZE);
     }
     _IOC(_IOC_READ_WRITE, ty, nr, size_of::<T>())
 }
@@ -742,14 +746,9 @@ pub const fn _IOWR<T>(ty: u8, nr: u8) -> Ioctl<*mut T> {
 #[allow(non_snake_case)]
 #[inline]
 pub const fn _IOC<T: ?Sized>(dir: Dir, ty: u8, nr: u8, size: usize) -> Ioctl<T> {
-    use consts::*;
+    assert!(size <= platform::MAX_ARG_SIZE);
 
-    assert!(size <= (_IOC_SIZEMASK as usize));
-
-    let request = (dir.0 << _IOC_DIRSHIFT)
-        | ((ty as u32) << _IOC_TYPESHIFT)
-        | ((nr as u32) << _IOC_NRSHIFT)
-        | ((size as u32) << _IOC_SIZESHIFT);
+    let request = platform::_IOC(dir.0, ty as u32, nr as u32, size as u32);
     Ioctl::from_raw(request)
 }
 
