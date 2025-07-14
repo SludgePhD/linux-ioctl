@@ -485,12 +485,21 @@ impl fmt::Debug for Dir {
 }
 
 /// Indicates that an `ioctl` neither reads nor writes data through its argument.
+///
+/// Identical to [`IOC_VOID`]. [`_IOC_NONE`] is a Linuxism, while [`IOC_VOID`] is used by other
+/// systems.
 pub const _IOC_NONE: Dir = Dir(platform::_IOC_NONE);
 
 /// Indicates that an `ioctl` reads data from the kernel through its pointer argument.
+///
+/// Identical to [`IOC_OUT`]. [`_IOC_READ`] is a Linuxism, while [`IOC_OUT`] is used by other
+/// systems.
 pub const _IOC_READ: Dir = Dir(platform::_IOC_READ);
 
 /// Indicates that an `ioctl` writes data to the kernel through its pointer argument.
+///
+/// Identical to [`IOC_IN`]. [`_IOC_WRITE`] is a Linuxism, while [`IOC_IN`] is used by other
+/// systems.
 pub const _IOC_WRITE: Dir = Dir(platform::_IOC_WRITE);
 
 /// Indicates that an `ioctl` both reads and writes data through its pointer argument.
@@ -499,6 +508,26 @@ pub const _IOC_WRITE: Dir = Dir(platform::_IOC_WRITE);
 ///
 /// C code always uses `_IOC_READ | _IOC_WRITE` instead of a dedicated constant.
 pub const _IOC_READ_WRITE: Dir = Dir(platform::_IOC_READ | platform::_IOC_WRITE);
+
+/// Indicates that an `ioctl` neither reads nor writes data through its argument.
+///
+/// Identical to [`_IOC_NONE`].
+pub const IOC_VOID: Dir = _IOC_NONE;
+
+/// Indicates that an `ioctl` reads data from the kernel through its pointer argument.
+///
+/// Identical to [`_IOC_READ`].
+pub const IOC_OUT: Dir = _IOC_READ;
+
+/// Indicates that an `ioctl` writes data to the kernel through its pointer argument.
+///
+/// Identical to [`_IOC_WRITE`].
+pub const IOC_IN: Dir = _IOC_WRITE;
+
+/// Indicates that an `ioctl` both reads and writes data through its pointer argument.
+///
+/// Identical to [`_IOC_READ_WRITE`] and `_IOC_READ | _IOC_WRITE`.
+pub const IOC_INOUT: Dir = _IOC_READ_WRITE;
 
 /// Creates an [`Ioctl`] that doesn't read or write any userspace data.
 ///
