@@ -108,6 +108,10 @@ mod readme {}
 #[path = "platform/linux.rs"]
 mod platform;
 
+#[cfg(any(target_os = "macos", target_os = "ios", target_os = "tvos"))]
+#[path = "platform/apple.rs"]
+mod platform;
+
 #[cfg(any(target_os = "freebsd"))]
 #[path = "platform/freebsd.rs"]
 mod platform;

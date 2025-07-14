@@ -1,10 +1,10 @@
-//! Constants taken from the headers in https://github.com/freebsd/freebsd-src
+//! Constants taken from Apple's XNU source distribution.
 //!
-//! commit 697bf0f416e4fe0fdd974b9eacdaed140fe18061
+//! commit e3723e1f17661b24996789d8afc084c0c3303b26
 
-const IOCPARM_SHIFT: u32 = 13;
+const IOCPARM_MASK: u32 = 0x1fff;
 
-pub(crate) const MAX_ARG_SIZE: usize = (1 << IOCPARM_SHIFT) - 1;
+pub(crate) const MAX_ARG_SIZE: usize = IOCPARM_MASK as _;
 
 pub(crate) const IOC_VOID: u32 = 0x20000000;
 pub(crate) const IOC_OUT: u32 = 0x40000000;
