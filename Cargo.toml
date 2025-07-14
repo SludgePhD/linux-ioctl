@@ -1,6 +1,6 @@
 [package]
 name = "linux-ioctl"
-version = "0.2.2"
+version = "0.2.3"
 edition = "2024"
 license = "0BSD"
 rust-version = "1.85"  # (keep this in sync with `ci.yaml`)

@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.2.3
+
+- Add support for FreeBSD and XNU (macOS, tvOS, and iOS).
+- Add BSD-style ioctl direction aliases (`IOC_VOID`, `IOC_IN`, etc).
+- Make `Ioctl::request` a `const fn`.
+- Relicense under the 0-clause BSD license.
+
 ## v0.2.2
 
 - Add `Ioctl::cast_mut` and `Ioctl::cast_const`, mirroring the methods on raw pointers.
