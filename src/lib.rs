@@ -240,6 +240,14 @@ impl<T: ?Sized> Ioctl<T> {
     /// Returns the `ioctl` request code.
     ///
     /// This is passed to `ioctl(2)` as its second argument.
+    ///
+    /// Note that the second argument of `ioctl(2)` may be `int` or `unsigned long`, depending on
+    /// target platform. [`Ioctl::ioctl`] will convert the type as needed, but user code that uses
+    /// [`Ioctl::request`] may have to do it manually.
+    ///
+    /// This library always uses [`u32`] in its interface because [`u32`] is the smallest
+    /// platform-independent type capable of encoding every `ioctl` number used in Linux' encoding
+    /// scheme.
     pub const fn request(self) -> u32 {
         self.request
     }
@@ -338,8 +346,9 @@ impl Ioctl<NoArgs> {
     /// # Safety
     ///
     /// This method performs an arbitrary `ioctl` on an arbitrary file descriptor.
-    /// The caller has to ensure that any safety requirements of the `ioctl` are met, and that `fd`
-    /// belongs to the driver it expects.
+    /// The caller has to ensure that any safety requirements of the `ioctl` are met, that `T`
+    /// denotes the correct argument type, and that `fd` is valid (open) and belongs to the driver
+    /// it expects.
     pub unsafe fn ioctl(self, fd: &impl AsRawFd) -> io::Result<c_int> {
         let res = unsafe { libc::ioctl(fd.as_raw_fd(), self.request as _, 0) };
         if res == -1 {
@@ -362,8 +371,9 @@ impl<T> Ioctl<T> {
     /// # Safety
     ///
     /// This method performs an arbitrary `ioctl` on an arbitrary file descriptor.
-    /// The caller has to ensure that any safety requirements of the `ioctl` are met, and that `fd`
-    /// belongs to the driver it expects.
+    /// The caller has to ensure that any safety requirements of the `ioctl` are met, that `T`
+    /// denotes the correct argument type, and that `fd` is valid (open) and belongs to the driver
+    /// it expects.
     pub unsafe fn ioctl(self, fd: &impl AsRawFd, arg: T) -> io::Result<c_int> {
         let res = unsafe { libc::ioctl(fd.as_raw_fd(), self.request as _, arg) };
         if res == -1 {
@@ -521,8 +531,8 @@ pub const fn _IO(ty: u8, nr: u8) -> Ioctl<NoArgs> {
 
 /// Creates an [`Ioctl`] that reads data of type `T` from the kernel.
 ///
-/// A pointer to the data will be passed to `ioctl(2)`, and the kernel will fill the destination
-/// with data.
+/// By default, a pointer to the data will be passed to `ioctl(2)`, and the kernel will fill the
+/// destination with data.
 ///
 /// # Errors
 ///
@@ -660,8 +670,8 @@ pub const fn _IOW<T>(ty: u8, nr: u8) -> Ioctl<*const T> {
 
 /// Creates an [`Ioctl`] that writes and reads data of type `T`.
 ///
-/// A pointer to the data will be passed to `ioctl(2)`, and the kernel will read and write to the
-/// data `T`.
+/// By default, a pointer to the data will be passed to `ioctl(2)`, and the kernel will read and
+/// write to the data `T`.
 ///
 /// # Errors
 ///
@@ -690,8 +700,7 @@ pub const fn _IOWR<T>(ty: u8, nr: u8) -> Ioctl<*mut T> {
 /// - **`ty`**: the `ioctl` group or type to identify the driver or subsystem. You can find a list
 ///   [here].
 /// - **`nr`**: the `ioctl` number within its group.
-/// - **`size`**: the size of the `ioctl`'s indirect argument. `ioctl`s that take an argument
-///   directly (without passing a pointer to it) typically set this to 0.
+/// - **`size`**: the size of the `ioctl`'s (direct or indirect) argument.
 ///
 /// [here]: https://www.kernel.org/doc/html/latest/userspace-api/ioctl/ioctl-number.html
 ///
