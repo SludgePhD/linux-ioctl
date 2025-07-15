@@ -1,10 +1,15 @@
 # Changelog
 
-## v1.0.0
+## v1.0.1
 
 - Initial stable release.
 - Support for all BSD-derivatives supported by Rust.
 - Renamed the library from `linux-ioctl` to `uoctl`.
+- Renamed `Ioctl::with_arg` to `Ioctl::cast_arg`.
+
+## v1.0.0
+
+Yanked since it was missing one final intended breaking change.
 
 ## v0.2.3
 
