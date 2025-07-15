@@ -230,7 +230,7 @@ impl<T: ?Sized> Ioctl<T> {
     /// use uoctl::*;
     ///
     /// const KVMIO: u8 = 0xAE;
-    /// const KVM_CREATE_VM: Ioctl<c_int> = _IO(KVMIO, 0x01).with_arg::<c_int>();
+    /// const KVM_CREATE_VM: Ioctl<c_int> = _IO(KVMIO, 0x01).cast_arg::<c_int>();
     ///
     /// // The `KVM_CREATE_VM` ioctl takes the VM type as an argument. 0 is a reasonable default on
     /// // most architectures.
@@ -244,7 +244,7 @@ impl<T: ?Sized> Ioctl<T> {
     /// unsafe { libc::close(vm_fd) };
     /// # std::io::Result::Ok(())
     /// ```
-    pub const fn with_arg<T2>(self) -> Ioctl<T2> {
+    pub const fn cast_arg<T2>(self) -> Ioctl<T2> {
         Ioctl {
             request: self.request,
             _p: PhantomData,
@@ -292,7 +292,7 @@ impl<T> Ioctl<*const T> {
     /// ```
     #[inline]
     pub const fn with_direct_arg(self) -> Ioctl<T> {
-        self.with_arg()
+        self.cast_arg()
     }
 
     /// Casts the [`Ioctl`] so that it takes a `*mut` pointer instead of a `*const` pointer.
@@ -326,7 +326,7 @@ impl<T> Ioctl<*const T> {
     /// ```
     #[inline]
     pub const fn cast_mut(self) -> Ioctl<*mut T> {
-        self.with_arg()
+        self.cast_arg()
     }
 }
 
@@ -341,7 +341,7 @@ impl<T> Ioctl<*mut T> {
     /// pointer, the result is likely UB!
     #[inline]
     pub const fn cast_const(self) -> Ioctl<*const T> {
-        self.with_arg()
+        self.cast_arg()
     }
 }
 
@@ -539,7 +539,7 @@ pub const IOC_INOUT: Dir = _IOC_READ_WRITE;
 ///
 /// This type of ioctl can return an `int` to userspace via the return value of the `ioctl` syscall.
 /// By default, the returned [`Ioctl`] takes no argument.
-/// [`Ioctl::with_arg`] can be used to pass a direct argument to the `ioctl`.
+/// [`Ioctl::cast_arg`] can be used to pass a direct argument to the `ioctl`.
 ///
 /// # Example
 ///
