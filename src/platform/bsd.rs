@@ -1,10 +1,8 @@
-//! Constants taken from Apple's XNU source distribution.
-//!
-//! commit e3723e1f17661b24996789d8afc084c0c3303b26
+//! Platform details for BSD-derivatives.
 
-const IOCPARM_MASK: u32 = 0x1fff;
+const IOCPARM_SHIFT: u32 = 13;
 
-pub(crate) const MAX_ARG_SIZE: usize = IOCPARM_MASK as _;
+pub(crate) const MAX_ARG_SIZE: usize = (1 << IOCPARM_SHIFT) - 1;
 
 pub(crate) const IOC_VOID: u32 = 0x20000000;
 pub(crate) const IOC_OUT: u32 = 0x40000000;

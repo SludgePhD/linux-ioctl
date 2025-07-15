@@ -1,3 +1,5 @@
+//! Platform details for Linux and Android.
+
 #[cfg(any(
     target_arch = "mips",
     target_arch = "mips64",

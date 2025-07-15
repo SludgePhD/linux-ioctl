@@ -108,12 +108,18 @@ mod readme {}
 #[path = "platform/linux.rs"]
 mod platform;
 
-#[cfg(any(target_os = "macos", target_os = "ios", target_os = "tvos"))]
-#[path = "platform/apple.rs"]
-mod platform;
-
-#[cfg(any(target_os = "freebsd"))]
-#[path = "platform/freebsd.rs"]
+#[cfg(any(
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "tvos",
+    target_os = "visionos",
+    target_os = "watchos",
+    target_os = "freebsd",
+    target_os = "dragonfly",
+    target_os = "openbsd",
+    target_os = "netbsd",
+))]
+#[path = "platform/bsd.rs"]
 mod platform;
 
 use std::{ffi::c_int, fmt, io, marker::PhantomData, ops::BitOr, os::fd::AsRawFd};
