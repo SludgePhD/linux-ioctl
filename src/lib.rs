@@ -723,6 +723,18 @@ pub const fn _IOWR<T>(ty: u8, nr: u8) -> Ioctl<*mut T> {
     _IOC(_IOC_READ_WRITE, ty, nr, size_of::<T>())
 }
 
+/// Creates an [`Ioctl`] that writes an `int` to the kernel.
+///
+/// This is a FreeBSD-specific function that only exists when building for FreeBSD.
+/// Linux does not have a function/macro like this, and it typically uses [`_IOW`] to define
+/// `ioctl`s that pass `int`s (often necessitating a call to [`Ioctl::with_direct_arg`]).
+#[cfg_attr(docsrs, doc(cfg(target_os = "freebsd")))]
+#[cfg(any(docsrs, target_os = "freebsd"))]
+#[allow(non_snake_case)]
+pub const fn _IOWINT(group: u8, nr: u8) -> Ioctl<c_int> {
+    _IOC(IOC_VOID, group, nr, size_of::<c_int>())
+}
+
 /// Manually constructs an [`Ioctl`] from its components.
 ///
 /// Also see [`Ioctl::from_raw`] for a way to interface with "legacy" ioctls that don't yet follow
