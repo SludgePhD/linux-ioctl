@@ -1,10 +1,10 @@
-# `linux-ioctl`
+# `uoctl`
 
-Simple porting tools for Linux-style `ioctl(2)` driver interfaces.
+Simple porting tools for `ioctl(2)` driver interfaces on Unix-like systems.
 
 ## Example
 
-Let's use `uinput` to create a userspace input device.
+Let's use `uinput` to create a userspace input device on Linux.
 
 From `linux/uinput.h`:
 
@@ -20,7 +20,7 @@ From `linux/uinput.h`:
 ```rust
 use std::{mem, fs::File, ffi::c_char};
 use libc::uinput_setup;
-use linux_ioctl::*;
+use uoctl::*;
 
 const UINPUT_IOCTL_BASE: u8 = b'U';
 const UI_DEV_CREATE: Ioctl<NoArgs> = _IO(UINPUT_IOCTL_BASE, 1);

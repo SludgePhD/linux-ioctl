@@ -27,7 +27,7 @@
 //!
 //! ```no_run
 //! use std::mem::MaybeUninit;
-//! use linux_ioctl::*;
+//! use uoctl::*;
 //!
 //! #[repr(C)]
 //! struct Capability {
@@ -181,7 +181,7 @@ impl<T: ?Sized> Ioctl<T> {
     /// use std::io;
     /// use std::fs::File;
     /// use std::ffi::c_int;
-    /// use linux_ioctl::*;
+    /// use uoctl::*;
     ///
     /// const FIONREAD: Ioctl<*mut c_int> = Ioctl::from_raw(0x541B);
     ///
@@ -227,7 +227,7 @@ impl<T: ?Sized> Ioctl<T> {
     /// ```no_run
     /// use std::fs::File;
     /// use std::ffi::c_int;
-    /// use linux_ioctl::*;
+    /// use uoctl::*;
     ///
     /// const KVMIO: u8 = 0xAE;
     /// const KVM_CREATE_VM: Ioctl<c_int> = _IO(KVMIO, 0x01).with_arg::<c_int>();
@@ -286,7 +286,7 @@ impl<T> Ioctl<*const T> {
     ///
     /// ```
     /// use std::ffi::c_int;
-    /// use linux_ioctl::{Ioctl, _IOW};
+    /// use uoctl::{Ioctl, _IOW};
     ///
     /// const UI_SET_EVBIT: Ioctl<c_int> = _IOW(b'U', 100).with_direct_arg();
     /// ```
@@ -320,7 +320,7 @@ impl<T> Ioctl<*const T> {
     ///
     /// ```
     /// use std::ffi::c_void as ff_effect;
-    /// use linux_ioctl::{Ioctl, _IOW};
+    /// use uoctl::{Ioctl, _IOW};
     ///
     /// pub const EVIOCSFF: Ioctl<*mut ff_effect> = _IOW(b'E', 0x80).cast_mut();
     /// ```
@@ -426,7 +426,7 @@ impl<T> Ioctl<T> {
 /// ```rust
 /// use std::{mem, fs::File, ffi::c_char};
 /// use libc::uinput_setup;
-/// use linux_ioctl::*;
+/// use uoctl::*;
 ///
 /// const UINPUT_IOCTL_BASE: u8 = b'U';
 /// const UI_DEV_CREATE: Ioctl<NoArgs> = _IO(UINPUT_IOCTL_BASE, 1);
@@ -556,7 +556,7 @@ pub const IOC_INOUT: Dir = _IOC_READ_WRITE;
 ///
 /// ```rust
 /// use std::fs::File;
-/// use linux_ioctl::*;
+/// use uoctl::*;
 ///
 /// const KVMIO: u8 = 0xAE;
 /// const KVM_GET_API_VERSION: Ioctl<NoArgs> = _IO(KVMIO, 0x00);
@@ -597,7 +597,7 @@ pub const fn _IO(ty: u8, nr: u8) -> Ioctl<NoArgs> {
 /// ```
 /// use std::fs::File;
 /// use std::ffi::c_int;
-/// use linux_ioctl::*;
+/// use uoctl::*;
 ///
 /// const RNDGETENTCNT: Ioctl<*mut c_int> = _IOR(b'R', 0x00);
 ///
@@ -672,7 +672,7 @@ pub const fn _IOR<T>(ty: u8, nr: u8) -> Ioctl<*mut T> {
 /// ```rust
 /// use std::{mem, fs::File, ffi::{c_char, c_int}};
 /// use libc::uinput_setup;
-/// use linux_ioctl::*;
+/// use uoctl::*;
 ///
 /// const UINPUT_IOCTL_BASE: u8 = b'U';
 /// const UI_DEV_CREATE: Ioctl<NoArgs> = _IO(UINPUT_IOCTL_BASE, 1);
@@ -779,7 +779,7 @@ pub const fn _IOWINT(group: u8, nr: u8) -> Ioctl<c_int> {
 ///
 /// ```no_run
 /// use std::ffi::c_char;
-/// use linux_ioctl::*;
+/// use uoctl::*;
 ///
 /// const UINPUT_IOCTL_BASE: u8 = b'U';
 /// const fn UI_GET_SYSNAME(len: usize) -> Ioctl<*mut c_char> {

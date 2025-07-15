@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.0.0
+
+- Initial stable release.
+- Support for all BSD-derivatives supported by Rust.
+- Renamed the library from `linux-ioctl` to `uoctl`.
+
 ## v0.2.3
 
 - Add support for FreeBSD and XNU (macOS, tvOS, and iOS).
